@@ -584,7 +584,7 @@ function patientAction(action){
           }
         }
       })
-      logEvent("Patienten umverteilt"+(skToMove?" ("+skToMove+")":"")+" -> "+action+": "+amount)
+      logEvent("Patienten umverteilt -> "+action+": "+amount)
     }
   }else{
     let current=parseInt(currentPatientBox.innerText)||0
@@ -714,10 +714,10 @@ function schnellSichtung(bereich, sk, delta){
   delta = delta||1
   const field=bereich.querySelector(".patients")
   if(!field) return
-  // Nicht unter 0
   const prevManual=parseInt(field.dataset.manual||"0")||0
   if(delta<0 && prevManual<=0) return
   field.dataset.manual=Math.max(0,prevManual+delta)
+  totalPatients=Math.max(0,totalPatients+delta)
   sichtungCounts[sk]=Math.max(0,(sichtungCounts[sk]||0)+delta)
   bereich._skCounts=bereich._skCounts||{SK1:0,SK2:0,SK3:0,SK4:0}
   bereich._skCounts[sk]=Math.max(0,(bereich._skCounts[sk]||0)+delta)
@@ -867,15 +867,45 @@ function updateDashboard(){
   document.getElementById("dashSEG").innerHTML=segRows
 
   function pu(unit){ const el=document.querySelector('[data-unit="'+unit+'"]'); return el?(parseInt(el.innerText)||0):null }
-  let patRows="<b>Patienten</b><br>Gesamt: <strong>"+totalPatients+"</strong>"
+
+  // Gesamt-Patienten: Summe ALLER gelben Boxen (außer ZUFAHRT)
+  let totalPatientsCalc = 0
+  document.querySelectorAll(".patients").forEach(p=>{
+    if(p.dataset.unit==="ZUFAHRT") return
+    totalPatientsCalc += parseInt(p.innerText)||0
+  })
+
+  // SK-Summen: live aus allen _skCounts aller Bereiche
+  const skCalc = {SK1:0, SK2:0, SK3:0, SK4:0}
+  document.querySelectorAll(".bereich").forEach(b=>{
+    if(b._skCounts){
+      skCalc.SK1 += b._skCounts.SK1||0
+      skCalc.SK2 += b._skCounts.SK2||0
+      skCalc.SK3 += b._skCounts.SK3||0
+      skCalc.SK4 += b._skCounts.SK4||0
+    }
+  })
+
+  let patRows="<b>Patienten</b><br>Gesamt: <strong>"+totalPatientsCalc+"</strong>"
   const pPSS=pu("PSS"); if(pPSS!==null) patRows+="<br>PSS: "+pPSS
   const pVor=pu("VORSICHT"); if(pVor!==null) patRows+="<br>Vorsichtung: "+pVor
   const pBER=pu("BER"); if(pBER!==null) patRows+="<br>BER: "+pBER
   patRows+="<br>SEG-21: "+(pu("21")??0)+"<br>SEG-22: "+(pu("22")??0)+"<br>EVAK: "+(pu("EVAK")??0)+"<br>Transport: "+(pu("TRANSPORT")??0)
-  patRows+='<br><span class="dash-sk1">SK1: '+sichtungCounts.SK1+'</span>'
-  patRows+='<br><span class="dash-sk2">SK2: '+sichtungCounts.SK2+'</span>'
-  patRows+='<br><span class="dash-sk3">SK3: '+sichtungCounts.SK3+'</span>'
-  patRows+='<br><span class="dash-sk4">SK4: '+sichtungCounts.SK4+'</span>'
+  // Halteplätze und Abschnitte auch anzeigen
+  document.querySelectorAll("#halteplaetze .bereich").forEach(hp=>{
+    const label=hp.querySelector(".bheader")?.innerText||"HP"
+    const count=parseInt(hp.querySelector(".patients")?.innerText)||0
+    patRows+="<br>"+label+": "+count
+  })
+  document.querySelectorAll("#abschnitteContainer .abschnitt").forEach(ab=>{
+    const label=ab.querySelector(".abschnittName")?.value||"Abschnitt"
+    const count=parseInt(ab.querySelector(".patients")?.innerText)||0
+    patRows+="<br>"+label+": "+count
+  })
+  patRows+='<br><span class="dash-sk1">SK1: '+skCalc.SK1+'</span>'
+  patRows+='<br><span class="dash-sk2">SK2: '+skCalc.SK2+'</span>'
+  patRows+='<br><span class="dash-sk3">SK3: '+skCalc.SK3+'</span>'
+  patRows+='<br><span class="dash-sk4">SK4: '+skCalc.SK4+'</span>'
   // Demografie-Summe aus allen Bereichen
   let totMe=0,totWe=0,totMk=0,totWk=0
   document.querySelectorAll(".bereich").forEach(b=>{
