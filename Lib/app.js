@@ -1223,10 +1223,19 @@ function sichtungSetzen(){
   if(!currentSichtung){ alert("Bitte zuerst eine Sichtungskategorie auswaehlen."); return }
   if(!currentPatientBox){ closePopup(); return }
   const inputAmount=parseInt(document.getElementById("patientInput").value)
+  // Ungekategorisierte Patienten = Gesamtzahl minus bereits kategorisierte
   const bestand=parseInt(currentPatientBox.innerText)||0
-  const zuweisung=(!isNaN(inputAmount)&&inputAmount>0)?Math.min(inputAmount,bestand):bestand
-  if(zuweisung<=0){ alert("Keine Patienten vorhanden."); return }
-  sichtungCounts[currentSichtung]=(sichtungCounts[currentSichtung]||0)+zuweisung
+  const bereich=currentPatientBox.closest(".bereich")
+  const bereitsKat=bereich ? Object.values(bereich._skCounts||{}).reduce((a,b)=>a+b,0) : 0
+  const unkategorisiert=Math.max(0,bestand-bereitsKat)
+  const zuweisung=(!isNaN(inputAmount)&&inputAmount>0)?Math.min(inputAmount,unkategorisiert):unkategorisiert
+  if(zuweisung<=0){ alert("Keine unkategorisierten Patienten vorhanden."); return }
+  // Nur _skCounts erhöhen, dataset.manual und Gesamtzahl bleiben gleich
+  if(bereich){
+    bereich._skCounts=bereich._skCounts||{SK1:0,SK2:0,SK3:0,SK4:0}
+    bereich._skCounts[currentSichtung]=(bereich._skCounts[currentSichtung]||0)+zuweisung
+    updateSkButtons(bereich)
+  }
   logEvent("Sichtung zugewiesen: "+zuweisung+" Pat. -> "+currentSichtung)
   updatePatients(); closePopup(); saveState()
 }
