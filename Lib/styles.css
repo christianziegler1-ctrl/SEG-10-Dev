@@ -487,12 +487,11 @@ header {
 .zufahrtContainer {
   flex-shrink: 0;
   min-height: clamp(80px, 10vh, 120px);
-  max-height: clamp(100px, 14vh, 150px);
   background: var(--bg-card);
   border: 2px solid var(--border);
   border-left: 4px solid var(--accent-blue);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   box-shadow: var(--shadow);
   transition: background 0.25s;
